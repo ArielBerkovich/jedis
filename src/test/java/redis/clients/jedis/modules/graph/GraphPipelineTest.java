@@ -1,19 +1,9 @@
 package redis.clients.jedis.modules.graph;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import redis.clients.jedis.Connection;
 import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.graph.Header;
@@ -25,40 +15,42 @@ import redis.clients.jedis.json.GsonJsonEncoderDecoder;
 import redis.clients.jedis.json.JsonEncoderDecoder;
 import redis.clients.jedis.modules.RedisModuleCommandsTestBase;
 
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+
+import static org.junit.Assert.*;
+
 public class GraphPipelineTest extends RedisModuleCommandsTestBase {
 
   private Connection c;
   private JsonEncoderDecoder jsonEncoderDecoder = new GsonJsonEncoderDecoder();
 
-  @BeforeClass
-  public static void prepare() {
+  @BeforeClass public static void prepare() {
     RedisModuleCommandsTestBase.prepare();
   }
-//
-//  @Before
-//  public void createApi() {
-//    api = new RedisGraph();
-//  }
-//
-//  @After
-//  public void deleteGraph() {
-//    api.deleteGraph("social");
-//    api.close();
-//  }
+  //
+  //  @Before
+  //  public void createApi() {
+  //    api = new RedisGraph();
+  //  }
+  //
+  //  @After
+  //  public void deleteGraph() {
+  //    api.deleteGraph("social");
+  //    api.close();
+  //  }
 
-  @Before
-  public void createApi() {
+  @Before public void createApi() {
     c = createConnection();
   }
 
-  @After
-  public void deleteGraph() {
+  @After public void deleteGraph() {
     c.close();
   }
 
-  @Test
-  public void testSync() {
-    Pipeline pipeline = new Pipeline(c,jsonEncoderDecoder);
+  @Test public void testSync() {
+    Pipeline pipeline = new Pipeline(c, jsonEncoderDecoder);
 
     pipeline.set("x", "1");
     pipeline.graphQuery("social", "CREATE (:Person {name:'a'})");
@@ -67,7 +59,7 @@ public class GraphPipelineTest extends RedisModuleCommandsTestBase {
     pipeline.get("x");
     pipeline.graphQuery("social", "MATCH (n:Person) RETURN n");
     pipeline.graphDelete("g");
-//    pipeline.callProcedure("social", "db.labels");
+    //    pipeline.callProcedure("social", "db.labels");
     pipeline.graphQuery("social", "CALL db.labels()");
     List<Object> results = pipeline.syncAndReturnAll();
 
@@ -76,12 +68,12 @@ public class GraphPipelineTest extends RedisModuleCommandsTestBase {
     assertEquals("OK", results.get(0));
 
     // Redis graph command
-//    assertEquals(ResultSetImpl.class, results.get(1).getClass());
+    //    assertEquals(ResultSetImpl.class, results.get(1).getClass());
     ResultSet resultSet = (ResultSet) results.get(1);
     assertEquals(1, resultSet.getStatistics().nodesCreated());
     assertEquals(1, resultSet.getStatistics().propertiesSet());
 
-//    assertEquals(ResultSetImpl.class, results.get(2).getClass());
+    //    assertEquals(ResultSetImpl.class, results.get(2).getClass());
     resultSet = (ResultSet) results.get(2);
     assertEquals(1, resultSet.getStatistics().nodesCreated());
     assertEquals(1, resultSet.getStatistics().propertiesSet());
@@ -95,7 +87,7 @@ public class GraphPipelineTest extends RedisModuleCommandsTestBase {
     assertEquals("2", results.get(4));
 
     // Graph query result
-//    assertEquals(ResultSetImpl.class, results.get(5).getClass());
+    //    assertEquals(ResultSetImpl.class, results.get(5).getClass());
     resultSet = (ResultSet) results.get(5);
 
     assertNotNull(resultSet.getHeader());
@@ -121,7 +113,7 @@ public class GraphPipelineTest extends RedisModuleCommandsTestBase {
     assertEquals(Arrays.asList("n"), record.keys());
     assertEquals(expectedNode, record.getValue("n"));
 
-//    assertEquals(ResultSetImpl.class, results.get(7).getClass());
+    //    assertEquals(ResultSetImpl.class, results.get(7).getClass());
     resultSet = (ResultSet) results.get(7);
 
     assertNotNull(resultSet.getHeader());
@@ -141,16 +133,15 @@ public class GraphPipelineTest extends RedisModuleCommandsTestBase {
     assertEquals("Person", record.getValue("label"));
   }
 
-  @Test
-  public void testReadOnlyQueries() {
-    Pipeline pipeline = new Pipeline(c,jsonEncoderDecoder);
+  @Test public void testReadOnlyQueries() {
+    Pipeline pipeline = new Pipeline(c, jsonEncoderDecoder);
 
     pipeline.set("x", "1");
     pipeline.graphQuery("social", "CREATE (:Person {name:'a'})");
     pipeline.graphQuery("g", "CREATE (:Person {name:'a'})");
     pipeline.graphReadonlyQuery("social", "MATCH (n:Person) RETURN n");
     pipeline.graphDelete("g");
-//    pipeline.callProcedure("social", "db.labels");
+    //    pipeline.callProcedure("social", "db.labels");
     pipeline.graphQuery("social", "CALL db.labels()");
     List<Object> results = pipeline.syncAndReturnAll();
 
@@ -159,18 +150,18 @@ public class GraphPipelineTest extends RedisModuleCommandsTestBase {
     assertEquals("OK", results.get(0));
 
     // Redis graph command
-//    assertEquals(ResultSetImpl.class, results.get(1).getClass());
+    //    assertEquals(ResultSetImpl.class, results.get(1).getClass());
     ResultSet resultSet = (ResultSet) results.get(1);
     assertEquals(1, resultSet.getStatistics().nodesCreated());
     assertEquals(1, resultSet.getStatistics().propertiesSet());
 
-//    assertEquals(ResultSetImpl.class, results.get(2).getClass());
+    //    assertEquals(ResultSetImpl.class, results.get(2).getClass());
     resultSet = (ResultSet) results.get(2);
     assertEquals(1, resultSet.getStatistics().nodesCreated());
     assertEquals(1, resultSet.getStatistics().propertiesSet());
 
     // Graph read-only query result
-//    assertEquals(ResultSetImpl.class, results.get(5).getClass());
+    //    assertEquals(ResultSetImpl.class, results.get(5).getClass());
     resultSet = (ResultSet) results.get(3);
 
     assertNotNull(resultSet.getHeader());
@@ -196,7 +187,7 @@ public class GraphPipelineTest extends RedisModuleCommandsTestBase {
     assertEquals(Arrays.asList("n"), record.keys());
     assertEquals(expectedNode, record.getValue("n"));
 
-//    assertEquals(ResultSetImpl.class, results.get(5).getClass());
+    //    assertEquals(ResultSetImpl.class, results.get(5).getClass());
     resultSet = (ResultSet) results.get(5);
 
     assertNotNull(resultSet.getHeader());
@@ -216,9 +207,8 @@ public class GraphPipelineTest extends RedisModuleCommandsTestBase {
     assertEquals("Person", record.getValue("label"));
   }
 
-  @Test
-  public void testWaitReplicas() {
-    Pipeline pipeline = new Pipeline(c,jsonEncoderDecoder);
+  @Test public void testWaitReplicas() {
+    Pipeline pipeline = new Pipeline(c, jsonEncoderDecoder);
     pipeline.set("x", "1");
     pipeline.graphProfile("social", "CREATE (:Person {name:'a'})");
     pipeline.graphProfile("g", "CREATE (:Person {name:'a'})");

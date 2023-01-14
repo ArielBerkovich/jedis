@@ -1,5 +1,26 @@
 package redis.clients.jedis.modules;
 
+import com.google.gson.Gson;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import redis.clients.jedis.Connection;
+import redis.clients.jedis.Pipeline;
+import redis.clients.jedis.Response;
+import redis.clients.jedis.json.*;
+import redis.clients.jedis.search.IndexOptions;
+import redis.clients.jedis.search.Query;
+import redis.clients.jedis.search.Schema;
+import redis.clients.jedis.search.SearchResult;
+import redis.clients.jedis.search.aggr.AggregationBuilder;
+import redis.clients.jedis.search.aggr.AggregationResult;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static redis.clients.jedis.json.Path.ROOT_PATH;
@@ -7,34 +28,16 @@ import static redis.clients.jedis.modules.json.JsonObjects.Baz;
 import static redis.clients.jedis.modules.json.JsonObjects.IRLObject;
 import static redis.clients.jedis.search.RediSearchUtil.toStringMap;
 
-import com.google.gson.Gson;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Collections;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import redis.clients.jedis.Connection;
-import redis.clients.jedis.Pipeline;
-import redis.clients.jedis.Response;
-import redis.clients.jedis.json.*;
-import redis.clients.jedis.search.*;
-import redis.clients.jedis.search.aggr.*;
-
 public class RedisModulesPipelineTest extends RedisModuleCommandsTestBase {
 
   private static final Gson gson = new Gson();
   private static final JsonEncoderDecoder jsonEncoderDecoder = new GsonJsonEncoderDecoder();
-  @BeforeClass
-  public static void prepare() {
+
+  @BeforeClass public static void prepare() {
     RedisModuleCommandsTestBase.prepare();
   }
 
-  @Test
-  public void search() {
+  @Test public void search() {
     Schema sc = new Schema().addTextField("title", 1.0).addTextField("body", 1.0);
     String index = "testindex";
 
@@ -44,15 +47,17 @@ public class RedisModulesPipelineTest extends RedisModuleCommandsTestBase {
 
     Connection c = createConnection();
 
-    Pipeline p = new Pipeline(c,jsonEncoderDecoder);
+    Pipeline p = new Pipeline(c, jsonEncoderDecoder);
 
     Response<String> create = p.ftCreate(index, IndexOptions.defaultOptions(), sc);
     Response<String> alter = p.ftAlter(index, new Schema().addTextField("foo", 1.0));
     p.hset("doc1", toStringMap(fields));
     p.hset("doc2", toStringMap(fields));
     Response<SearchResult> searchResult = p.ftSearch(index, new Query("hello world"));
-    Response<SearchResult> searchBytesResult = p.ftSearch(index.getBytes(), new Query("hello world"));
-    Response<AggregationResult> aggregateResult = p.ftAggregate(index, new AggregationBuilder().groupBy("@title"));
+    Response<SearchResult> searchBytesResult = p.ftSearch(index.getBytes(),
+        new Query("hello world"));
+    Response<AggregationResult> aggregateResult = p.ftAggregate(index,
+        new AggregationBuilder().groupBy("@title"));
     Response<String> explain = p.ftExplain(index, new Query("@title:title_val"));
     Response<List<String>> explainCLI = p.ftExplainCLI(index, new Query("@title:title_val"));
     Response<Map<String, Object>> info = p.ftInfo(index);
@@ -96,14 +101,13 @@ public class RedisModulesPipelineTest extends RedisModuleCommandsTestBase {
     assertEquals(expected, synDump.get());
   }
 
-  @Test
-  public void jsonV1() {
+  @Test public void jsonV1() {
     Map<String, String> hm1 = new HashMap<>();
     hm1.put("hello", "world");
     hm1.put("oh", "snap");
 
     Map<String, Object> hm2 = new HashMap<>();
-    hm2.put("array", new String[]{"a", "b", "c"});
+    hm2.put("array", new String[] { "a", "b", "c" });
     hm2.put("boolean", true);
     hm2.put("number", 3);
 
@@ -112,7 +116,7 @@ public class RedisModulesPipelineTest extends RedisModuleCommandsTestBase {
     Baz baz3 = new Baz("quuz3", "grault3", "waldo3");
 
     Connection c = createConnection();
-    Pipeline p = new Pipeline(c,jsonEncoderDecoder);
+    Pipeline p = new Pipeline(c, jsonEncoderDecoder);
 
     Response<String> set1 = p.jsonSet("foo", Path.ROOT_PATH, hm1);
     Response<Object> get = p.jsonGet("foo");
@@ -143,10 +147,10 @@ public class RedisModulesPipelineTest extends RedisModuleCommandsTestBase {
     Response<Long> strLen = p.jsonStrLen("foo");
     Response<Long> strApp = p.jsonStrAppend("foo", "?");
     Response<String> set4 = p.jsonSetWithEscape("obj", new IRLObject());
-    p.jsonSet("arr", ROOT_PATH, new int[]{ 0, 1, 2, 3 });
+    p.jsonSet("arr", ROOT_PATH, new int[] { 0, 1, 2, 3 });
     Response<Object> pop = p.jsonArrPop("arr");
     Response<Long> arrLen = p.jsonArrLen("arr");
-    p.jsonSet("baz", ROOT_PATH, new Baz[]{ baz1, baz2, baz3 });
+    p.jsonSet("baz", ROOT_PATH, new Baz[] { baz1, baz2, baz3 });
     Response<Baz> popClass = p.jsonArrPop("baz", Baz.class);
     Response<Baz> popClassWithPath = p.jsonArrPop("baz", Baz.class, Path.ROOT_PATH);
     Response<Baz> popClassWithIndex = p.jsonArrPop("baz", Baz.class, Path.ROOT_PATH, 0);
@@ -189,37 +193,42 @@ public class RedisModulesPipelineTest extends RedisModuleCommandsTestBase {
     assertEquals(baz1, popClassWithIndex.get());
   }
 
-  @Test
-  public void jsonV2() {
+  @Test public void jsonV2() {
     Map<String, String> hm1 = new HashMap<>();
     hm1.put("hello", "world");
     hm1.put("oh", "snap");
 
     Map<String, Object> hm2 = new HashMap<>();
-    hm2.put("array", new String[]{"a", "b", "c"});
+    hm2.put("array", new String[] { "a", "b", "c" });
     hm2.put("boolean", true);
     hm2.put("number", 3);
 
     Connection c = createConnection();
-    Pipeline p = new Pipeline(c,jsonEncoderDecoder);
+    Pipeline p = new Pipeline(c, jsonEncoderDecoder);
 
     Response<String> setWithEscape = p.jsonSetWithEscape("foo", Path2.ROOT_PATH, hm1);
-    Response<Object> get = p.jsonGet("foo",  Path2.ROOT_PATH);
+    Response<Object> get = p.jsonGet("foo", Path2.ROOT_PATH);
     Response<List<JSONArray>> mget = p.jsonMGet(Path2.ROOT_PATH, "foo");
     Response<List<Long>> strLen = p.jsonStrLen("foo", new Path2("hello"));
     Response<List<Long>> strApp = p.jsonStrAppend("foo", new Path2("hello"), "!");
     Response<Long> del = p.jsonDel("foo", new Path2("hello"));
     Response<String> set = p.jsonSet("bar", Path2.ROOT_PATH, gson.toJson("strung"));
-    Response<String> setWithParams = p.jsonSet("foo", Path2.ROOT_PATH, gson.toJson(hm2), new JsonSetParams().xx());
-    Response<String> setWithEscapeWithParams = p.jsonSetWithEscape("foo", Path2.ROOT_PATH, hm2, new JsonSetParams().xx());
+    Response<String> setWithParams = p.jsonSet("foo", Path2.ROOT_PATH, gson.toJson(hm2),
+        new JsonSetParams().xx());
+    Response<String> setWithEscapeWithParams = p.jsonSetWithEscape("foo", Path2.ROOT_PATH, hm2,
+        new JsonSetParams().xx());
     Response<List<Object>> pop = p.jsonArrPop("foo", new Path2("array"));
     Response<List<Object>> popWithIndex = p.jsonArrPop("foo", new Path2("array"), 2);
-    Response<List<Long>> append = p.jsonArrAppend("foo", Path2.of("$.array"), gson.toJson("b"), gson.toJson("d"));
-    Response<List<Long>> appendWithEscape = p.jsonArrAppendWithEscape("foo", Path2.of("$.array"), "e");
+    Response<List<Long>> append = p.jsonArrAppend("foo", Path2.of("$.array"), gson.toJson("b"),
+        gson.toJson("d"));
+    Response<List<Long>> appendWithEscape = p.jsonArrAppendWithEscape("foo", Path2.of("$.array"),
+        "e");
     Response<List<Long>> index = p.jsonArrIndex("foo", Path2.of("$.array"), gson.toJson("b"));
-    Response<List<Long>> indexWithEscape = p.jsonArrIndexWithEscape("foo", Path2.of("$.array"), "b");
+    Response<List<Long>> indexWithEscape = p.jsonArrIndexWithEscape("foo", Path2.of("$.array"),
+        "b");
     Response<List<Long>> insert = p.jsonArrInsert("foo", new Path2("array"), 0, gson.toJson("x"));
-    Response<List<Long>> insertWithEscape = p.jsonArrInsertWithEscape("foo", new Path2("array"), 0, "x");
+    Response<List<Long>> insertWithEscape = p.jsonArrInsertWithEscape("foo", new Path2("array"), 0,
+        "x");
     Response<List<Long>> arrLen = p.jsonArrLen("foo", new Path2("array"));
     Response<List<Long>> trim = p.jsonArrTrim("foo", new Path2("array"), 1, 2);
     Response<List<Boolean>> toggle = p.jsonToggle("foo", new Path2("boolean"));

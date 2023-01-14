@@ -1,37 +1,23 @@
 package redis.clients.jedis;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
 import org.junit.Test;
-
-import redis.clients.jedis.exceptions.JedisDataException;
-import redis.clients.jedis.resps.Tuple;
 import redis.clients.jedis.commands.jedis.JedisCommandsTestBase;
+import redis.clients.jedis.exceptions.JedisDataException;
 import redis.clients.jedis.params.SetParams;
+import redis.clients.jedis.resps.Tuple;
 import redis.clients.jedis.util.SafeEncoder;
+
+import java.io.IOException;
+import java.util.*;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.*;
 
 public class PipeliningTest extends JedisCommandsTestBase {
 
-  @Test
-  public void pipeline() {
+  @Test public void pipeline() {
     Pipeline p = jedis.pipelined();
     p.set("foo", "bar");
     p.get("foo");
@@ -42,8 +28,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertEquals("bar", results.get(1));
   }
 
-  @Test
-  public void pipelineResponse() {
+  @Test public void pipelineResponse() {
     jedis.set("string", "foo");
     jedis.lpush("list", "foo");
     jedis.hset("hash", "foo", "bar");
@@ -89,8 +74,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertArrayEquals(expectedGetRangeBytes, getrangeBytes.get());
   }
 
-  @Test
-  public void intermediateSyncs() {
+  @Test public void intermediateSyncs() {
     jedis.set("string", "foo");
     jedis.lpush("list", "foo");
     jedis.hset("hash", "foo", "bar");
@@ -142,8 +126,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertArrayEquals(expectedGetRangeBytes, getrangeBytes.get());
   }
 
-  @Test
-  public void pipelineResponseWithData() {
+  @Test public void pipelineResponseWithData() {
     jedis.zadd("zset", 1, "foo");
 
     Pipeline p = jedis.pipelined();
@@ -153,8 +136,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertNotNull(score.get());
   }
 
-  @Test
-  public void pipelineBinarySafeHashCommands() {
+  @Test public void pipelineBinarySafeHashCommands() {
     jedis.hset("key".getBytes(), "f1".getBytes(), "v111".getBytes());
     jedis.hset("key".getBytes(), "f22".getBytes(), "v2222".getBytes());
 
@@ -202,21 +184,20 @@ public class PipeliningTest extends JedisCommandsTestBase {
     verifyHasBothValues(firstValue, secondValue, "v111".getBytes(), "v2222".getBytes());
   }
 
-  private void verifyHasBothValues(byte[] firstKey, byte[] secondKey, byte[] value1, byte[] value2) {
+  private void verifyHasBothValues(byte[] firstKey, byte[] secondKey, byte[] value1,
+      byte[] value2) {
     assertFalse(Arrays.equals(firstKey, secondKey));
     assertTrue(Arrays.equals(firstKey, value1) || Arrays.equals(firstKey, value2));
     assertTrue(Arrays.equals(secondKey, value1) || Arrays.equals(secondKey, value2));
   }
 
-  @Test
-  public void pipelineSelect() {
+  @Test public void pipelineSelect() {
     Pipeline p = jedis.pipelined();
     p.select(1);
     p.sync();
   }
 
-  @Test
-  public void pipelineResponseWithoutData() {
+  @Test public void pipelineResponseWithoutData() {
     jedis.zadd("zset", 1, "foo");
 
     Pipeline p = jedis.pipelined();
@@ -226,8 +207,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertNull(score.get());
   }
 
-  @Test(expected = IllegalStateException.class)
-  public void pipelineResponseWithinPipeline() {
+  @Test(expected = IllegalStateException.class) public void pipelineResponseWithinPipeline() {
     jedis.set("string", "foo");
 
     Pipeline p = jedis.pipelined();
@@ -236,8 +216,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     p.sync();
   }
 
-  @Test
-  public void pipelineWithPubSub() {
+  @Test public void pipelineWithPubSub() {
     Pipeline pipelined = jedis.pipelined();
     Response<Long> p1 = pipelined.publish("foo", "bar");
     Response<Long> p2 = pipelined.publish("foo".getBytes(), "bar".getBytes());
@@ -246,16 +225,14 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertEquals(0, p2.get().longValue());
   }
 
-  @Test
-  public void canRetrieveUnsetKey() {
+  @Test public void canRetrieveUnsetKey() {
     Pipeline p = jedis.pipelined();
     Response<String> shouldNotExist = p.get(UUID.randomUUID().toString());
     p.sync();
     assertNull(shouldNotExist.get());
   }
 
-  @Test
-  public void piplineWithError() {
+  @Test public void piplineWithError() {
     Pipeline p = jedis.pipelined();
     p.set("foo", "bar");
     Response<Set<String>> error = p.smembers("foo");
@@ -269,161 +246,159 @@ public class PipeliningTest extends JedisCommandsTestBase {
     }
     assertEquals(r.get(), "bar");
   }
-//
-//  @Test
-//  public void multi() {
-//    Pipeline p = jedis.pipelined();
-//    p.multi();
-//    Response<Long> r1 = p.hincrBy("a", "f1", -1);
-//    Response<Long> r2 = p.hincrBy("a", "f1", -2);
-//    Response<List<Object>> r3 = p.exec();
-//    List<Object> result = p.syncAndReturnAll();
-//
-//    assertEquals(new Long(-1), r1.get());
-//    assertEquals(new Long(-3), r2.get());
-//
-//    assertEquals(4, result.size());
-//
-//    assertEquals("OK", result.get(0));
-//    assertEquals("QUEUED", result.get(1));
-//    assertEquals("QUEUED", result.get(2));
-//
-//    // 4th result is a list with the results from the multi
-//    @SuppressWarnings("unchecked")
-//    List<Object> multiResult = (List<Object>) result.get(3);
-//    assertEquals(new Long(-1), multiResult.get(0));
-//    assertEquals(new Long(-3), multiResult.get(1));
-//
-//    assertEquals(new Long(-1), r3.get().get(0));
-//    assertEquals(new Long(-3), r3.get().get(1));
-//
-//  }
-//
-//  @Test
-//  public void multiWithMassiveRequests() {
-//    Pipeline p = jedis.pipelined();
-//    p.multi();
-//
-//    List<Response<?>> responseList = new ArrayList<Response<?>>();
-//    for (int i = 0; i < 100000; i++) {
-//      // any operation should be ok, but shouldn't forget about timeout
-//      responseList.add(p.setbit("test", 1, true));
-//    }
-//
-//    Response<List<Object>> exec = p.exec();
-//    p.sync();
-//
-//    // we don't need to check return value
-//    // if below codes run without throwing Exception, we're ok
-//    exec.get();
-//
-//    for (Response<?> resp : responseList) {
-//      resp.get();
-//    }
-//  }
-//
-//  @Test
-//  public void multiWithSync() {
-//    jedis.set("foo", "314");
-//    jedis.set("bar", "foo");
-//    jedis.set("hello", "world");
-//    Pipeline p = jedis.pipelined();
-//    Response<String> r1 = p.get("bar");
-//    p.multi();
-//    Response<String> r2 = p.get("foo");
-//    p.exec();
-//    Response<String> r3 = p.get("hello");
-//    p.sync();
-//
-//    // before multi
-//    assertEquals("foo", r1.get());
-//    // It should be readable whether exec's response was built or not
-//    assertEquals("314", r2.get());
-//    // after multi
-//    assertEquals("world", r3.get());
-//  }
-//
-//  @Test
-//  public void multiWatch() {
-//    final String key = "foo";
-//    assertEquals(5L, jedis.incrBy(key, 5L));
-//
-//    List<Object> expect = new ArrayList<>();
-//    List<Object> expMulti = null; // MULTI will fail
-//
-//    Pipeline pipe = jedis.pipelined();
-//    pipe.watch(key);        expect.add("OK");
-//    pipe.incrBy(key, 3L);   expect.add(8L);
-//    pipe.multi();           expect.add("OK");
-//    pipe.incrBy(key, 6L);   expect.add("QUEUED");
-//    assertEquals(expect, pipe.syncAndReturnAll());      expect.clear();
-//
-//    try (Jedis tweak = createJedis()) {
-//      assertEquals(10L, tweak.incrBy(key, 2L));
-//    }
-//
-//    pipe.incrBy(key, 4L);   expect.add("QUEUED");
-//    pipe.exec();            expect.add(expMulti); // failed MULTI
-//    pipe.incrBy(key, 7L);   expect.add(17L);
-//    assertEquals(expect, pipe.syncAndReturnAll());
-//  }
-//
-//  @Test
-//  public void multiUnwatch() {
-//    final String key = "foo";
-//    assertEquals(5L, jedis.incrBy(key, 5L));
-//
-//    List<Object> expect = new ArrayList<>();
-//    List<Object> expMulti = new ArrayList<>();
-//
-//    Pipeline pipe = jedis.pipelined();
-//    pipe.watch(key);        expect.add("OK");
-//    pipe.incrBy(key, 3L);   expect.add(8L);
-//    pipe.unwatch();         expect.add("OK");
-//    pipe.multi();           expect.add("OK");
-//    pipe.incrBy(key, 6L);   expect.add("QUEUED");   expMulti.add(16L);
-//    assertEquals(expect, pipe.syncAndReturnAll());  expect.clear();
-//
-//    try (Jedis tweak = createJedis()) {
-//      assertEquals(10L, tweak.incrBy(key, 2L));
-//    }
-//
-//    pipe.incrBy(key, 4L);   expect.add("QUEUED");   expMulti.add(20L);
-//    pipe.exec();            expect.add(expMulti); // successful MULTI
-//    pipe.incrBy(key, 7L);   expect.add(27L);
-//    assertEquals(expect, pipe.syncAndReturnAll());
-//  }
-//
-//  @Test(expected = IllegalStateException.class)
-//  public void pipelineExecWhenNotInMulti() {
-//    Pipeline pipeline = jedis.pipelined();
-//    pipeline.exec();
-//  }
-//
-//  @Test(expected = IllegalStateException.class)
-//  public void pipelineDiscardWhenNotInMulti() {
-//    Pipeline pipeline = jedis.pipelined();
-//    pipeline.discard();
-//  }
-//
-//  @Test(expected = IllegalStateException.class)
-//  public void pipelineMultiWhenAlreadyInMulti() {
-//    Pipeline pipeline = jedis.pipelined();
-//    pipeline.multi();
-//    pipeline.set("foo", "3");
-//    pipeline.multi();
-//  }
+  //
+  //  @Test
+  //  public void multi() {
+  //    Pipeline p = jedis.pipelined();
+  //    p.multi();
+  //    Response<Long> r1 = p.hincrBy("a", "f1", -1);
+  //    Response<Long> r2 = p.hincrBy("a", "f1", -2);
+  //    Response<List<Object>> r3 = p.exec();
+  //    List<Object> result = p.syncAndReturnAll();
+  //
+  //    assertEquals(new Long(-1), r1.get());
+  //    assertEquals(new Long(-3), r2.get());
+  //
+  //    assertEquals(4, result.size());
+  //
+  //    assertEquals("OK", result.get(0));
+  //    assertEquals("QUEUED", result.get(1));
+  //    assertEquals("QUEUED", result.get(2));
+  //
+  //    // 4th result is a list with the results from the multi
+  //    @SuppressWarnings("unchecked")
+  //    List<Object> multiResult = (List<Object>) result.get(3);
+  //    assertEquals(new Long(-1), multiResult.get(0));
+  //    assertEquals(new Long(-3), multiResult.get(1));
+  //
+  //    assertEquals(new Long(-1), r3.get().get(0));
+  //    assertEquals(new Long(-3), r3.get().get(1));
+  //
+  //  }
+  //
+  //  @Test
+  //  public void multiWithMassiveRequests() {
+  //    Pipeline p = jedis.pipelined();
+  //    p.multi();
+  //
+  //    List<Response<?>> responseList = new ArrayList<Response<?>>();
+  //    for (int i = 0; i < 100000; i++) {
+  //      // any operation should be ok, but shouldn't forget about timeout
+  //      responseList.add(p.setbit("test", 1, true));
+  //    }
+  //
+  //    Response<List<Object>> exec = p.exec();
+  //    p.sync();
+  //
+  //    // we don't need to check return value
+  //    // if below codes run without throwing Exception, we're ok
+  //    exec.get();
+  //
+  //    for (Response<?> resp : responseList) {
+  //      resp.get();
+  //    }
+  //  }
+  //
+  //  @Test
+  //  public void multiWithSync() {
+  //    jedis.set("foo", "314");
+  //    jedis.set("bar", "foo");
+  //    jedis.set("hello", "world");
+  //    Pipeline p = jedis.pipelined();
+  //    Response<String> r1 = p.get("bar");
+  //    p.multi();
+  //    Response<String> r2 = p.get("foo");
+  //    p.exec();
+  //    Response<String> r3 = p.get("hello");
+  //    p.sync();
+  //
+  //    // before multi
+  //    assertEquals("foo", r1.get());
+  //    // It should be readable whether exec's response was built or not
+  //    assertEquals("314", r2.get());
+  //    // after multi
+  //    assertEquals("world", r3.get());
+  //  }
+  //
+  //  @Test
+  //  public void multiWatch() {
+  //    final String key = "foo";
+  //    assertEquals(5L, jedis.incrBy(key, 5L));
+  //
+  //    List<Object> expect = new ArrayList<>();
+  //    List<Object> expMulti = null; // MULTI will fail
+  //
+  //    Pipeline pipe = jedis.pipelined();
+  //    pipe.watch(key);        expect.add("OK");
+  //    pipe.incrBy(key, 3L);   expect.add(8L);
+  //    pipe.multi();           expect.add("OK");
+  //    pipe.incrBy(key, 6L);   expect.add("QUEUED");
+  //    assertEquals(expect, pipe.syncAndReturnAll());      expect.clear();
+  //
+  //    try (Jedis tweak = createJedis()) {
+  //      assertEquals(10L, tweak.incrBy(key, 2L));
+  //    }
+  //
+  //    pipe.incrBy(key, 4L);   expect.add("QUEUED");
+  //    pipe.exec();            expect.add(expMulti); // failed MULTI
+  //    pipe.incrBy(key, 7L);   expect.add(17L);
+  //    assertEquals(expect, pipe.syncAndReturnAll());
+  //  }
+  //
+  //  @Test
+  //  public void multiUnwatch() {
+  //    final String key = "foo";
+  //    assertEquals(5L, jedis.incrBy(key, 5L));
+  //
+  //    List<Object> expect = new ArrayList<>();
+  //    List<Object> expMulti = new ArrayList<>();
+  //
+  //    Pipeline pipe = jedis.pipelined();
+  //    pipe.watch(key);        expect.add("OK");
+  //    pipe.incrBy(key, 3L);   expect.add(8L);
+  //    pipe.unwatch();         expect.add("OK");
+  //    pipe.multi();           expect.add("OK");
+  //    pipe.incrBy(key, 6L);   expect.add("QUEUED");   expMulti.add(16L);
+  //    assertEquals(expect, pipe.syncAndReturnAll());  expect.clear();
+  //
+  //    try (Jedis tweak = createJedis()) {
+  //      assertEquals(10L, tweak.incrBy(key, 2L));
+  //    }
+  //
+  //    pipe.incrBy(key, 4L);   expect.add("QUEUED");   expMulti.add(20L);
+  //    pipe.exec();            expect.add(expMulti); // successful MULTI
+  //    pipe.incrBy(key, 7L);   expect.add(27L);
+  //    assertEquals(expect, pipe.syncAndReturnAll());
+  //  }
+  //
+  //  @Test(expected = IllegalStateException.class)
+  //  public void pipelineExecWhenNotInMulti() {
+  //    Pipeline pipeline = jedis.pipelined();
+  //    pipeline.exec();
+  //  }
+  //
+  //  @Test(expected = IllegalStateException.class)
+  //  public void pipelineDiscardWhenNotInMulti() {
+  //    Pipeline pipeline = jedis.pipelined();
+  //    pipeline.discard();
+  //  }
+  //
+  //  @Test(expected = IllegalStateException.class)
+  //  public void pipelineMultiWhenAlreadyInMulti() {
+  //    Pipeline pipeline = jedis.pipelined();
+  //    pipeline.multi();
+  //    pipeline.set("foo", "3");
+  //    pipeline.multi();
+  //  }
 
-  @Test(expected = IllegalStateException.class)
-  public void testJedisThrowExceptionWhenInPipeline() {
+  @Test(expected = IllegalStateException.class) public void testJedisThrowExceptionWhenInPipeline() {
     Pipeline pipeline = jedis.pipelined();
     pipeline.set("foo", "3");
     jedis.get("somekey");
     fail("Can't use jedis instance when in Pipeline");
   }
 
-  @Test
-  public void testReuseJedisWhenPipelineIsEmpty() {
+  @Test public void testReuseJedisWhenPipelineIsEmpty() {
     Pipeline pipeline = jedis.pipelined();
     pipeline.set("foo", "3");
     pipeline.sync();
@@ -431,29 +406,27 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertEquals(result, "3");
   }
 
-  @Test
-  public void testResetStateWhenInPipeline() {
+  @Test public void testResetStateWhenInPipeline() {
     Pipeline pipeline = jedis.pipelined();
     pipeline.set("foo", "3");
     jedis.resetState();
     String result = jedis.get("foo");
     assertEquals(result, "3");
   }
-//
-//  @Test
-//  public void testDiscardInPipeline() {
-//    Pipeline pipeline = jedis.pipelined();
-//    pipeline.multi();
-//    pipeline.set("foo", "bar");
-//    Response<String> discard = pipeline.discard();
-//    Response<String> get = pipeline.get("foo");
-//    pipeline.sync();
-//    discard.get();
-//    get.get();
-//  }
+  //
+  //  @Test
+  //  public void testDiscardInPipeline() {
+  //    Pipeline pipeline = jedis.pipelined();
+  //    pipeline.multi();
+  //    pipeline.set("foo", "bar");
+  //    Response<String> discard = pipeline.discard();
+  //    Response<String> get = pipeline.get("foo");
+  //    pipeline.sync();
+  //    discard.get();
+  //    get.get();
+  //  }
 
-  @Test
-  public void waitReplicas() {
+  @Test public void waitReplicas() {
     Pipeline p = jedis.pipelined();
     p.set("wait", "replicas");
     p.waitReplicas(1, 10);
@@ -465,8 +438,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     }
   }
 
-  @Test
-  public void setGet() {
+  @Test public void setGet() {
     Pipeline p = jedis.pipelined();
     Response<String> _ok = p.set("hello", "world");
     Response<String> _world = p.setGet("hello", "jedis", SetParams.setParams());
@@ -480,11 +452,11 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertNull(_null.get());
   }
 
-  @Test
-  public void setGetBinary() {
+  @Test public void setGetBinary() {
     Pipeline p = jedis.pipelined();
     Response<String> _ok = p.set("hello".getBytes(), "world".getBytes());
-    Response<byte[]> _world = p.setGet("hello".getBytes(), "jedis".getBytes(), SetParams.setParams());
+    Response<byte[]> _world = p.setGet("hello".getBytes(), "jedis".getBytes(),
+        SetParams.setParams());
     Response<byte[]> _jedis = p.get("hello".getBytes());
     Response<byte[]> _null = p.setGet("key".getBytes(), "value".getBytes(), SetParams.setParams());
     p.sync();
@@ -495,8 +467,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertNull(_null.get());
   }
 
-  @Test
-  public void testEval() {
+  @Test public void testEval() {
     String script = "return 'success!'";
 
     Pipeline p = jedis.pipelined();
@@ -506,8 +477,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertEquals("success!", result.get());
   }
 
-  @Test
-  public void testEvalWithBinary() {
+  @Test public void testEvalWithBinary() {
     String script = "return 'success!'";
 
     Pipeline p = jedis.pipelined();
@@ -517,8 +487,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertArrayEquals(SafeEncoder.encode("success!"), (byte[]) result.get());
   }
 
-  @Test
-  public void testEvalKeyAndArg() {
+  @Test public void testEvalKeyAndArg() {
     String key = "test";
     String arg = "3";
     String script = "redis.call('INCRBY', KEYS[1], ARGV[1]) redis.call('INCRBY', KEYS[1], ARGV[1])";
@@ -536,13 +505,12 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertEquals("13", result2.get());
   }
 
-  @Test
-  public void testEvalKeyAndArgWithBinary() {
+  @Test public void testEvalKeyAndArgWithBinary() {
     // binary
     byte[] bKey = SafeEncoder.encode("test");
     byte[] bArg = SafeEncoder.encode("3");
-    byte[] bScript = SafeEncoder
-        .encode("redis.call('INCRBY', KEYS[1], ARGV[1]) redis.call('INCRBY', KEYS[1], ARGV[1])");
+    byte[] bScript = SafeEncoder.encode(
+        "redis.call('INCRBY', KEYS[1], ARGV[1]) redis.call('INCRBY', KEYS[1], ARGV[1])");
 
     Pipeline bP = jedis.pipelined();
     bP.set(bKey, SafeEncoder.encode("0"));
@@ -557,8 +525,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertArrayEquals(SafeEncoder.encode("13"), bResult2.get());
   }
 
-  @Test
-  public void testEvalNestedLists() {
+  @Test public void testEvalNestedLists() {
     String script = "return { {KEYS[1]} , {2} }";
 
     Pipeline p = jedis.pipelined();
@@ -570,8 +537,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertThat((List<Long>) results.get(1), listWithItem(2L));
   }
 
-  @Test
-  public void testEvalNestedListsWithBinary() {
+  @Test public void testEvalNestedListsWithBinary() {
     byte[] bScript = SafeEncoder.encode("return { {KEYS[1]} , {2} }");
     byte[] bKey = SafeEncoder.encode("key1");
 
@@ -584,8 +550,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertThat((List<Long>) results.get(1), listWithItem(2L));
   }
 
-  @Test
-  public void testEvalsha() {
+  @Test public void testEvalsha() {
     String script = "return 'success!'";
     String sha1 = jedis.scriptLoad(script);
 
@@ -598,8 +563,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertEquals("success!", result.get());
   }
 
-  @Test
-  public void testEvalshaKeyAndArg() {
+  @Test public void testEvalshaKeyAndArg() {
     String key = "test";
     String arg = "3";
     String script = "redis.call('INCRBY', KEYS[1], ARGV[1]) redis.call('INCRBY', KEYS[1], ARGV[1])";
@@ -620,8 +584,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertEquals("13", result2.get());
   }
 
-  @Test
-  public void testEvalshaKeyAndArgWithBinary() {
+  @Test public void testEvalshaKeyAndArgWithBinary() {
     byte[] bKey = SafeEncoder.encode("test");
     byte[] bArg = SafeEncoder.encode("3");
     String script = "redis.call('INCRBY', KEYS[1], ARGV[1]) redis.call('INCRBY', KEYS[1], ARGV[1])";
@@ -642,75 +605,74 @@ public class PipeliningTest extends JedisCommandsTestBase {
     assertNull(result1.get());
     assertArrayEquals(SafeEncoder.encode("13"), result2.get());
   }
-//
-//  @Test
-//  public void testPipelinedTransactionResponse() {
-//
-//    String key1 = "key1";
-//    String val1 = "val1";
-//
-//    String key2 = "key2";
-//    String val2 = "val2";
-//
-//    String key3 = "key3";
-//    String field1 = "field1";
-//    String field2 = "field2";
-//    String field3 = "field3";
-//    String field4 = "field4";
-//
-//    String value1 = "value1";
-//    String value2 = "value2";
-//    String value3 = "value3";
-//    String value4 = "value4";
-//
-//    Map<String, String> hashMap = new HashMap<String, String>();
-//    hashMap.put(field1, value1);
-//    hashMap.put(field2, value2);
-//
-//    String key4 = "key4";
-//    Map<String, String> hashMap1 = new HashMap<String, String>();
-//    hashMap1.put(field3, value3);
-//    hashMap1.put(field4, value4);
-//
-//    jedis.set(key1, val1);
-//    jedis.set(key2, val2);
-//    jedis.hmset(key3, hashMap);
-//    jedis.hmset(key4, hashMap1);
-//
-//    Pipeline pipeline = jedis.pipelined();
-//    pipeline.multi();
-//
-//    pipeline.get(key1);
-//    pipeline.hgetAll(key2);
-//    pipeline.hgetAll(key3);
-//    pipeline.get(key4);
-//
-//    Response<List<Object>> response = pipeline.exec();
-//    pipeline.sync();
-//
-//    List<Object> result = response.get();
-//
-//    assertEquals(4, result.size());
-//
-//    assertEquals("val1", result.get(0));
-//
-//    assertTrue(result.get(1) instanceof JedisDataException);
-//
-//    Map<String, String> hashMapReceived = (Map<String, String>) result.get(2);
-//    Iterator<String> iterator = hashMapReceived.keySet().iterator();
-//    String mapKey1 = iterator.next();
-//    String mapKey2 = iterator.next();
-//    assertFalse(iterator.hasNext());
-//    verifyHasBothValues(mapKey1, mapKey2, field1, field2);
-//    String mapValue1 = hashMapReceived.get(mapKey1);
-//    String mapValue2 = hashMapReceived.get(mapKey2);
-//    verifyHasBothValues(mapValue1, mapValue2, value1, value2);
-//
-//    assertTrue(result.get(3) instanceof JedisDataException);
-//  }
+  //
+  //  @Test
+  //  public void testPipelinedTransactionResponse() {
+  //
+  //    String key1 = "key1";
+  //    String val1 = "val1";
+  //
+  //    String key2 = "key2";
+  //    String val2 = "val2";
+  //
+  //    String key3 = "key3";
+  //    String field1 = "field1";
+  //    String field2 = "field2";
+  //    String field3 = "field3";
+  //    String field4 = "field4";
+  //
+  //    String value1 = "value1";
+  //    String value2 = "value2";
+  //    String value3 = "value3";
+  //    String value4 = "value4";
+  //
+  //    Map<String, String> hashMap = new HashMap<String, String>();
+  //    hashMap.put(field1, value1);
+  //    hashMap.put(field2, value2);
+  //
+  //    String key4 = "key4";
+  //    Map<String, String> hashMap1 = new HashMap<String, String>();
+  //    hashMap1.put(field3, value3);
+  //    hashMap1.put(field4, value4);
+  //
+  //    jedis.set(key1, val1);
+  //    jedis.set(key2, val2);
+  //    jedis.hmset(key3, hashMap);
+  //    jedis.hmset(key4, hashMap1);
+  //
+  //    Pipeline pipeline = jedis.pipelined();
+  //    pipeline.multi();
+  //
+  //    pipeline.get(key1);
+  //    pipeline.hgetAll(key2);
+  //    pipeline.hgetAll(key3);
+  //    pipeline.get(key4);
+  //
+  //    Response<List<Object>> response = pipeline.exec();
+  //    pipeline.sync();
+  //
+  //    List<Object> result = response.get();
+  //
+  //    assertEquals(4, result.size());
+  //
+  //    assertEquals("val1", result.get(0));
+  //
+  //    assertTrue(result.get(1) instanceof JedisDataException);
+  //
+  //    Map<String, String> hashMapReceived = (Map<String, String>) result.get(2);
+  //    Iterator<String> iterator = hashMapReceived.keySet().iterator();
+  //    String mapKey1 = iterator.next();
+  //    String mapKey2 = iterator.next();
+  //    assertFalse(iterator.hasNext());
+  //    verifyHasBothValues(mapKey1, mapKey2, field1, field2);
+  //    String mapValue1 = hashMapReceived.get(mapKey1);
+  //    String mapValue2 = hashMapReceived.get(mapKey2);
+  //    verifyHasBothValues(mapValue1, mapValue2, value1, value2);
+  //
+  //    assertTrue(result.get(3) instanceof JedisDataException);
+  //  }
 
-  @Test
-  public void testSyncWithNoCommandQueued() {
+  @Test public void testSyncWithNoCommandQueued() {
     // we need to test with fresh instance of Jedis
     Jedis jedis2 = new Jedis(hnp.getHost(), hnp.getPort(), 500);
 
@@ -728,8 +690,7 @@ public class PipeliningTest extends JedisCommandsTestBase {
     jedis2.close();
   }
 
-  @Test
-  public void testCloseable() throws IOException {
+  @Test public void testCloseable() throws IOException {
     // we need to test with fresh instance of Jedis
     Jedis jedis2 = new Jedis(hnp.getHost(), hnp.getPort(), 500);
     jedis2.auth("foobared");
@@ -745,115 +706,115 @@ public class PipeliningTest extends JedisCommandsTestBase {
     retFuture2.get();
     jedis2.close();
   }
-//
-//  @Test
-//  public void testCloseableWithMulti() throws IOException {
-//    // we need to test with fresh instance of Jedis
-//    Jedis jedis2 = new Jedis(hnp.getHost(), hnp.getPort(), 500);
-//    jedis2.auth("foobared");
-//
-//    Pipeline pipeline = jedis2.pipelined();
-//    Response<String> retFuture1 = pipeline.set("a", "1");
-//    Response<String> retFuture2 = pipeline.set("b", "2");
-//
-//    pipeline.multi();
-//
-//    pipeline.set("a", "a");
-//    pipeline.set("b", "b");
-//
-//    pipeline.close();
-//
-//    try {
-//      pipeline.exec();
-//      fail("close should discard transaction");
-//    } catch (IllegalStateException e) {
-//      assertTrue(e.getMessage().contains("EXEC without MULTI"));
-//      // pass
-//    }
-//
-//    // it shouldn't meet any exception
-//    retFuture1.get();
-//    retFuture2.get();
-//    jedis2.close();
-//  }
-//
-//  @Test
-//  public void execAbort() {
-//    final String luaTimeLimitKey = "lua-time-limit";
-//    final String luaTimeLimit = jedis.configGet(luaTimeLimitKey).get(1);
-//    jedis.configSet(luaTimeLimitKey, "10");
-//
-//    Thread thread = new Thread(() -> {
-//      try (Jedis blocker = createJedis()) {
-//        blocker.eval("while true do end");
-//      } catch (Exception ex) {
-//        // swallow any exception
-//      }
-//    });
-//
-//    Pipeline pipe = jedis.pipelined();
-//    pipe.incr("foo");
-//    pipe.multi();
-//    pipe.incr("foo");
-//    pipe.sync();
-//
-//    thread.start();
-//    try {
-//      Thread.sleep(12); // allow Redis to be busy with the script and 'lua-time-limit' to exceed
-//    } catch (InterruptedException ex) { }
-//
-//    pipe.incr("foo");
-//    Response<List<Object>> txResp = pipe.exec();
-//    pipe.sync();
-//    try {
-//      txResp.get();
-//    } catch (Exception ex) {
-//      assertSame(AbortedTransactionException.class, ex.getClass());
-//    } finally {
-//      try {
-//        String status = jedis.scriptKill();
-//        // https://github.com/redis/jedis/issues/2656
-//        if ("OK".equalsIgnoreCase(status)) {
-//          scriptKillWait();
-//        } else {
-//          // #2656: Checking if this status is actually 'OK' when error occurs in next command.
-//          org.apache.logging.log4j.LogManager.getLogger().error(
-//              String.format("Status if SCRIPT KILL command is \"%s\"", status));
-//        }
-//      } finally {
-//        jedis.configSet(luaTimeLimitKey, luaTimeLimit);
-//      }
-//    }
-//  }
-//
-//  private void scriptKillWait() {
-//    int attemptLeft = 10;
-//    while (attemptLeft > 0) {
-//      try (Jedis pingJedis = createJedis()) {
-//        while (attemptLeft > 0) {
-//          try {
-//            pingJedis.ping();
-//            return; // wait is over
-//          } catch (JedisBusyException busy) {
-//            Thread.sleep(10); // BUSY, waiting for some time
-//            --attemptLeft; // doing this later; otherwise any exception in Thread.sleep()
-//                           // would cause decrement twice for the same turn.
-//          }
-//        }
-//      } catch (Exception any) {
-//        --attemptLeft;
-//        // try new connection
-//      }
-//    }
-//  }
-//
-//  private void verifyHasBothValues(String firstKey, String secondKey, String value1, String value2) {
-//    assertFalse(firstKey.equals(secondKey));
-//    assertTrue(firstKey.equals(value1) || firstKey.equals(value2));
-//    assertTrue(secondKey.equals(value1) || secondKey.equals(value2));
-//  }
+  //
+  //  @Test
+  //  public void testCloseableWithMulti() throws IOException {
+  //    // we need to test with fresh instance of Jedis
+  //    Jedis jedis2 = new Jedis(hnp.getHost(), hnp.getPort(), 500);
+  //    jedis2.auth("foobared");
+  //
+  //    Pipeline pipeline = jedis2.pipelined();
+  //    Response<String> retFuture1 = pipeline.set("a", "1");
+  //    Response<String> retFuture2 = pipeline.set("b", "2");
+  //
+  //    pipeline.multi();
+  //
+  //    pipeline.set("a", "a");
+  //    pipeline.set("b", "b");
+  //
+  //    pipeline.close();
+  //
+  //    try {
+  //      pipeline.exec();
+  //      fail("close should discard transaction");
+  //    } catch (IllegalStateException e) {
+  //      assertTrue(e.getMessage().contains("EXEC without MULTI"));
+  //      // pass
+  //    }
+  //
+  //    // it shouldn't meet any exception
+  //    retFuture1.get();
+  //    retFuture2.get();
+  //    jedis2.close();
+  //  }
+  //
+  //  @Test
+  //  public void execAbort() {
+  //    final String luaTimeLimitKey = "lua-time-limit";
+  //    final String luaTimeLimit = jedis.configGet(luaTimeLimitKey).get(1);
+  //    jedis.configSet(luaTimeLimitKey, "10");
+  //
+  //    Thread thread = new Thread(() -> {
+  //      try (Jedis blocker = createJedis()) {
+  //        blocker.eval("while true do end");
+  //      } catch (Exception ex) {
+  //        // swallow any exception
+  //      }
+  //    });
+  //
+  //    Pipeline pipe = jedis.pipelined();
+  //    pipe.incr("foo");
+  //    pipe.multi();
+  //    pipe.incr("foo");
+  //    pipe.sync();
+  //
+  //    thread.start();
+  //    try {
+  //      Thread.sleep(12); // allow Redis to be busy with the script and 'lua-time-limit' to exceed
+  //    } catch (InterruptedException ex) { }
+  //
+  //    pipe.incr("foo");
+  //    Response<List<Object>> txResp = pipe.exec();
+  //    pipe.sync();
+  //    try {
+  //      txResp.get();
+  //    } catch (Exception ex) {
+  //      assertSame(AbortedTransactionException.class, ex.getClass());
+  //    } finally {
+  //      try {
+  //        String status = jedis.scriptKill();
+  //        // https://github.com/redis/jedis/issues/2656
+  //        if ("OK".equalsIgnoreCase(status)) {
+  //          scriptKillWait();
+  //        } else {
+  //          // #2656: Checking if this status is actually 'OK' when error occurs in next command.
+  //          org.apache.logging.log4j.LogManager.getLogger().error(
+  //              String.format("Status if SCRIPT KILL command is \"%s\"", status));
+  //        }
+  //      } finally {
+  //        jedis.configSet(luaTimeLimitKey, luaTimeLimit);
+  //      }
+  //    }
+  //  }
+  //
+  //  private void scriptKillWait() {
+  //    int attemptLeft = 10;
+  //    while (attemptLeft > 0) {
+  //      try (Jedis pingJedis = createJedis()) {
+  //        while (attemptLeft > 0) {
+  //          try {
+  //            pingJedis.ping();
+  //            return; // wait is over
+  //          } catch (JedisBusyException busy) {
+  //            Thread.sleep(10); // BUSY, waiting for some time
+  //            --attemptLeft; // doing this later; otherwise any exception in Thread.sleep()
+  //                           // would cause decrement twice for the same turn.
+  //          }
+  //        }
+  //      } catch (Exception any) {
+  //        --attemptLeft;
+  //        // try new connection
+  //      }
+  //    }
+  //  }
+  //
+  //  private void verifyHasBothValues(String firstKey, String secondKey, String value1, String value2) {
+  //    assertFalse(firstKey.equals(secondKey));
+  //    assertTrue(firstKey.equals(value1) || firstKey.equals(value2));
+  //    assertTrue(secondKey.equals(value1) || secondKey.equals(value2));
+  //  }
 
   private <T> Matcher<Iterable<? super T>> listWithItem(T expected) {
-    return CoreMatchers.<T> hasItem(equalTo(expected));
+    return CoreMatchers.<T>hasItem(equalTo(expected));
   }
 }
