@@ -8,6 +8,7 @@ public class Path2 {
   public static final Path2 ROOT_PATH = new Path2("$");
 
   private final String str;
+  private final String str2 = null;
 
   public Path2(final String str) {
     if (str == null) {
